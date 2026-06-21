@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STUDIO M // RUNNER</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Urbanist:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #030303;
+            --cyber-green: #00ff66;
+            --cyber-red: #ff0055;
+            --cyber-blue: #00f0ff;
+            --text: #ffffff;
+            --panel: #0d0d11;
+            --border: #22222b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Urbanist', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 10px;
+        }
+
+        /* --- CONTENEDOR DEL JUEGO --- */
+        .game-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--panel);
+            border: 2px solid var(--border);
+            box-shadow: 0 0 30px rgba(0, 240, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Cabecera del juego */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 2px solid var(--border);
+            background: rgba(0,0,0,0.4);
+        }
+
+        .brand {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: var(--cyber-blue);
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+        }
+
+        .score-box {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+        }
+        #score-num {
+            color: var(--cyber-green);
+        }
+
+        /* Pantalla de juego (Canvas) */
+        canvas {
+            display: block;
+            width: 100%;
+            background: linear-gradient(180deg, #07070c 0%, #020204 100%);
+            cursor: pointer;
+        }
+
+        /* --- PANTALLAS SUPERPUESTAS (Overlays) --- */
+        .overlay {
+            position: absolute;
+            top: 56px; /* Altura de la cabecera */
+            left: 0;
+            width: 100%;
+            height: calc(100% - 56px);
+            background: rgba(3, 3, 3, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .overlay h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        #start-overlay h2 { color: var(--cyber-blue); }
+        #gameover-overlay h2 { color: var(--cyber-red); }
+
+        .overlay p {
+            color: #8e8e93;
+            font-size: 14px;
+            margin-bottom: 25px;
+            letter-spacing: 1px;
+        }
+
+        .cyber-btn {
+            background: transparent;
+            border: 2px solid var(--cyber-green);
+            color: var(--cyber-green);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 12px 30px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+        }
+
+        .cyber-btn:hover {
+            background-color: var(--cyber-green);
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* --- SECCIÓN INFORMATIVA / MONETIZACIÓN FUTURA --- */
+        .info-panel {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            background-color: var(--panel);
+            border: 1px solid var(--border);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .info-block h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            letter-spacing: 1px;
+            color: #8e8e93;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .info-block p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #d1d1d6;
+        }
+
+        .badge-dev {
+            display: inline-block;
+            background-color: rgba(0, 240, 255, 0.1);
+            color: var(--cyber-blue);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            padding: 2px 8px;
+            font-size: 11px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div class="game-header">
+            <div class="brand">STUDIO M // RUNNER</div>
+            <div class="score-box">SCORE: <span id="score-num">00000</span></div>
+        </div>
+
+        <div class="overlay" id="start-overlay">
+            <h2>System Ready</h2>
+            <p>Esquiva los cortafuegos del sistema. El ritmo aumenta cada segundo.</p>
+            <button class="cyber-btn" onclick="startGame()">Iniciar Enlace</button>
+        </div>
+
+        <div class="overlay hidden" id="gameover-overlay">
+            <h2>Conexión Perdida</h2>
+            <p>Tu puntuación final ha sido registrada en los buffers locales.</p>
+            <button class="cyber-btn" onclick="restartGame()">Reintentar</button>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="350"></canvas>
+    </div>
+
+    <div class="info-panel">
+        <div class="info-block">
+            <h3>Controles de Testeo</h3>
+            <p>Presiona <strong>Espacio</strong>, <strong>Flecha Arriba</strong> o haz <strong>Clic/Tap</strong> en el juego para saltar.</p>
+            <span class="badge-dev">Modo Sandbox Activo</span>
+        </div>
+        <div class="info-block">
+            <h3>Arquitectura de Monetización</h3>
+            <p>Estructura preparada para integrar vidas extra con micro-pagos y tabla de clasificación global competitiva mediante base de datos.</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Estado del Juego
+        let gameActive = false;
+        let score = 0;
+        let gameSpeed = 5;
+        let animationFrameId;
+
+        // Propiedades del Jugador (Runner)
+        const runner = {
+            x: 80,
+            y: 0, 
+            width: 30,
+            height: 45,
+            gravity: 0.6,
+            jumpForce: -13,
+            velocityY: 0,
+            isJumping: false,
+            groundY: 0
+        };
+
+        // Configuración del Suelo
+        const groundHeight = 40;
+        runner.groundY = canvas.height - groundHeight - runner.height;
+        runner.y = runner.groundY;
+
+        // Obstáculos (Cortafuegos)
+        let obstacles = [];
+        let spawnTimer = 0;
+        let minSpawnInterval = 90; 
+
+        // Captura de entradas (Teclado y Ratón/Touch)
+        window.addEventListener('keydown', (e) => {
+            if ((e.code === 'Space' || e.code === 'ArrowUp') && gameActive) {
+                triggerJump();
+                e.preventDefault(); 
+            }
+        });
+
+        canvas.addEventListener('mousedown', () => {
+            if (gameActive) triggerJump();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameActive) {
+                triggerJump();
+                e.preventDefault();
+            }
+        });
+
+        function triggerJump() {
+            if (!runner.isJumping) {
+                runner.velocityY = runner.jumpForce;
+                runner.isJumping = true;
+            }
+        }
+
+        // Generar Obstáculos de forma aleatoria inteligente
+        function generateObstacles() {
+            spawnTimer++;
+            if (spawnTimer > minSpawnInterval) {
+                if (Math.random() < 0.03) {
+                    const height = Math.floor(Math.random() * 35) + 30; 
+                    const width = Math.floor(Math.random() * 15) + 15;  
+                    
+                    obstacles.push({
+                        x: canvas.width,
+                        y: canvas.height - groundHeight - height,
+                        width: width,
+                        height: height
+                    });
+                    
+                    spawnTimer = Math.floor(Math.random() * 40); 
+                }
+            }
+        }
+
+        // Bucle Principal de Actualización (Física y Lógica)
+        function update() {
+            if (!gameActive) return;
+
+            // 1. Aumentar puntuación y dificultad progresivamente
+            score++;
+            document.getElementById('score-num').innerText = String(score).padStart(5, '0');
+            
+            if (score % 400 === 0) {
+                gameSpeed += 0.6; 
+                if(minSpawnInterval > 50) minSpawnInterval -= 5; 
+            }
+
+            // 2. Física del Jugador
+            runner.velocityY += runner.gravity;
+            runner.y += runner.velocityY;
+
+            // Colisión con el suelo
+            if (runner.y >= runner.groundY) {
+                runner.y = runner.groundY;
+                runner.velocityY = 0;
+                runner.isJumping = false;
+            }
+
+            // 3. Gestión de Obstáculos
+            generateObstacles();
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= gameSpeed;
+
+                // Detectar Colisiones (AABB)
+                if (
+                    runner.x < obstacles[i].x + obstacles[i].width &&
+                    runner.x + runner.width > obstacles[i].x &&
+                    runner.y < obstacles[i].y + obstacles[i].height &&
+                    runner.y + runner.height > obstacles[i].y
+                ) {
+                    endGame();
+                    return;
+                }
+
+                // Eliminar obstáculos fuera de pantalla
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        // Renderizado de Gráficos en el Canvas
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar Línea de Horizonte / Suelo
+            ctx.strokeStyle = varColor('--border');
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - groundHeight);
+            ctx.lineTo(canvas.width, canvas.height - groundHeight);
+            ctx.stroke();
+
+            // Cuadrícula de fondo estática
+            ctx.strokeStyle = '#0a0a14';
+            ctx.lineWidth = 1;
+            for(let i = 0; i < canvas.width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height - groundHeight);
+                ctx.stroke();
+            }
+
+            // Jugador (Neón Azul)
+            ctx.fillStyle = varColor('--cyber-blue');
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = varColor('--cyber-blue');
+            ctx.fillRect(runner.x, runner.y, runner.width, runner.height);
+
+            // Obstáculos (Neón Rojo)
+            ctx.fillStyle = varColor('--cyber-red');
+            ctx.shadowColor = varColor('--cyber-red');
+            ctx.shadowBlur = 15;
+            obstacles.forEach(obs => {
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            });
+
+            ctx.shadowBlur = 0;
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            document.getElementById('start-overlay').classList.add('hidden');
+            gameActive = true;
+            gameLoop();
+        }
+
+        function endGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationFrameId);
+            document.getElementById('gameover-overlay').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            document.getElementById('gameover-overlay').classList.add('hidden');
+            score = 0;
+            gameSpeed = 5;
+            minSpawnInterval = 90;
+            obstacles = [];
+            spawnTimer = 0;
+            runner.y = runner.groundY;
+            runner.velocityY = 0;
+            runner.isJumping = false;
+            
+            gameActive = true;
+            gameLoop();
+        }
+
+        function varColor(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+    </script>
+</body>
+</html>
